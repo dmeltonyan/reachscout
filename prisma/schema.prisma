@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_DIRECT")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  searches       Search[]
+  contacts       Contact[]
+  contactTags    ContactTag[]
+  outreachDrafts OutreachDraft[]
+  auditEvents    AuditEvent[]
+
+  @@map("users")
+}
+
+model Search {
+  id           String        @id @default(uuid())
+  userId       String        @map("user_id")
+  organization String
+  domain       String?
+  targetRole   String?       @map("target_role")
+  contactType  ContactType?  @map("contact_type")
+  department   String?
+  location     String?
+  keywords     String?
+  provider     String        @default("mock")
+  status       SearchStatus  @default(PENDING)
+  resultCount  Int           @default(0) @map("result_count")
+  errorMessage String?       @map("error_message")
+  durationMs   Int?          @map("duration_ms")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  completedAt  DateTime?     @map("completed_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contacts Contact[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("searches")
+}
+
+model Contact {
+  id                    String             @id @default(uuid())
+  userId                String             @map("user_id")
+  searchId              String?            @map("search_id")
+  fullName              String             @map("full_name")
+  normalizedName        String             @map("normalized_name")
+  title                 String?
+  organization          String?
+  department            String?
+  location              String?
+  summary               String?
+  profileUrl            String?            @map("profile_url")
+  contactPageUrl        String?            @map("contact_page_url")
+  companyDomain         String?            @map("company_domain")
+  relevanceScore        Float              @default(0) @map("relevance_score")
+  confidenceScore       Float              @default(0) @map("confidence_score")
+  confidenceExplanation String?            @map("confidence_explanation")
+  email                 String?
+  emailType             EmailType?         @map("email_type")
+  verificationStatus    VerificationStatus @default(UNVERIFIED) @map("verification_status")
+  verificationProvider  String?            @map("verification_provider")
+  verifiedAt            DateTime?          @map("verified_at")
+  status                ContactStatus      @default(NOT_CONTACTED) @map("status")
+  suppressionReason     String?            @map("suppression_reason")
+  notes                 String?
+  dateContacted         DateTime?          @map("date_contacted")
+  followUpDate          DateTime?          @map("follow_up_date")
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
+
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  search         Search?                 @relation(fields: [searchId], references: [id], onDelete: SetNull)
+  sources        Source[]
+  tags           ContactTagAssignment[]
+  outreachDrafts OutreachDraft[]
+
+  @@unique([userId, normalizedName, organization], name: "unique_contact_per_user")
+  @@index([userId])
+  @@index([organization])
+  @@index([normalizedName])
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+  @@index([confidenceScore])
+  @@map("contacts")
+}
+
+model Source {
+  id                  String     @id @default(uuid())
+  contactId           String     @map("contact_id")
+  url                 String
+  domain              String?
+  title               String?
+  sourceType          SourceType @map("source_type")
+  retrievedAt         DateTime   @default(now()) @map("retrieved_at")
+  supportsName        Boolean    @default(false) @map("supports_name")
+  supportsTitle       Boolean    @default(false) @map("supports_title")
+  supportsOrganization Boolean   @default(false) @map("supports_organization")
+  supportsEmail       Boolean    @default(false) @map("supports_email")
+  extractedTextHash   String?    @map("extracted_text_hash")
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@map("sources")
+}
+
+model ContactTag {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  name   String
+
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments ContactTagAssignment[]
+
+  @@unique([userId, name])
+  @@map("contact_tags")
+}
+
+model ContactTagAssignment {
+  contactId String @map("contact_id")
+  tagId     String @map("tag_id")
+
+  contact Contact    @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  tag     ContactTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([contactId, tagId])
+  @@map("contact_tag_assignments")
+}
+
+model OutreachDraft {
+  id        String         @id @default(uuid())
+  userId    String         @map("user_id")
+  contactId String         @map("contact_id")
+  channel   OutreachChannel
+  goal      String?
+  subject   String?
+  body      String
+  tone      String?
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([contactId])
+  @@map("outreach_drafts")
+}
+
+model AuditEvent {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  action     String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_events")
+}
+
+// ── Enums ──────────────────────────────────────────────────────────────────────
+
+enum SearchStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+
+  @@map("search_status")
+}
+
+enum ContactType {
+  RECRUITER
+  HIRING_MANAGER
+  ENGINEERING_MANAGER
+  FOUNDER
+  EXECUTIVE
+  PROFESSOR
+  RESEARCHER
+  ALUMNI
+  GENERAL_RECRUITING
+  OTHER
+
+  @@map("contact_type")
+}
+
+enum ContactStatus {
+  NOT_CONTACTED
+  DRAFTED
+  CONTACTED
+  REPLIED
+  FOLLOW_UP_NEEDED
+  CLOSED
+  DO_NOT_CONTACT
+
+  @@map("contact_status")
+}
+
+enum EmailType {
+  PUBLICLY_LISTED
+  VERIFIED
+  PATTERN_ESTIMATE
+  GENERAL_CONTACT
+  UNKNOWN
+
+  @@map("email_type")
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  VERIFIED_DELIVERABLE
+  VERIFIED_RISKY
+  VERIFIED_UNDELIVERABLE
+  CATCH_ALL
+  DISPOSABLE
+
+  @@map("verification_status")
+}
+
+enum SourceType {
+  COMPANY_TEAM_PAGE
+  COMPANY_ABOUT_PAGE
+  UNIVERSITY_FACULTY
+  LINKEDIN_PUBLIC
+  GITHUB_PROFILE
+  PERSONAL_WEBSITE
+  NEWS_ARTICLE
+  JOB_POSTING
+  OTHER_PUBLIC
+
+  @@map("source_type")
+}
+
+enum OutreachChannel {
+  EMAIL
+  LINKEDIN
+  ALUMNI_NETWORK
+  OTHER
+
+  @@map("outreach_channel")
+}
