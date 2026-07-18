@@ -15,11 +15,16 @@ const CONTACT_TYPE_LABELS: Record<ContactType, string[]> = {
 }
 
 const SAFE_OPERATORS = /^[\w\s\-\.:\/]+$/
+// Dangerous search operators that must not appear in queries
+const BLOCKED_OPERATORS = /\b(filetype|inurl|intitle|intext|cache|ext|OR|AND|NOT)\b\s*:/gi
 
 function safeQuery(...parts: (string | undefined)[]): string {
   const joined = parts.filter(Boolean).join(" ")
-  // Strip any characters that could form dangerous search operators
-  return joined.replace(/[^a-zA-Z0-9 \-_.:\/]/g, " ").replace(/\s+/g, " ").trim()
+  return joined
+    .replace(BLOCKED_OPERATORS, " ")
+    .replace(/[^a-zA-Z0-9 \-_.:\/]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
 }
 
 export function generateSearchQueries(

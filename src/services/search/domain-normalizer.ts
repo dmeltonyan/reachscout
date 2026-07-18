@@ -38,7 +38,7 @@ export function extractDomain(input: string): string | null {
 export function normalizeOrganizationName(name: string): string {
   return name
     .trim()
-    .replace(/\b(Inc\.?|LLC\.?|Ltd\.?|Corp\.?|Co\.?|Company|Corporation)\b/gi, "")
+    .replace(/\s*\b(Inc|LLC|Ltd|Corp|Co|Company|Corporation)\b\.?/gi, "")
     .replace(/\s+/g, " ")
     .trim()
 }
@@ -59,8 +59,8 @@ export function normalizeOrg(organization: string, domainInput?: string): Normal
     domain = extractDomain(domainInput)
   }
 
-  if (!domain) {
-    // Attempt to infer a domain from org name (simple heuristic)
+  if (!domain && !domainInput) {
+    // Only infer when no domain was supplied — never infer when the supplied domain was blocked
     const slug = normalizedName
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "")
