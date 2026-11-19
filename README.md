@@ -72,8 +72,8 @@ Browser → Next.js App Router → Route Handlers
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/dmeltonyan/SearchMelt.git
-cd SearchMelt/reachscout
+git clone https://github.com/dmeltonyan/reachscout.git
+cd reachscout
 pnpm install --ignore-scripts
 ```
 
@@ -223,4 +223,4 @@ Users are responsible for compliance with CAN-SPAM, GDPR, CCPA, and applicable p
 
 ---
 
-Built by [David Meltonyan](https://github.com/dmeltonyan) · [SearchMelt on GitHub](https://github.com/dmeltonyan/SearchMelt)
+Built by [David Meltonyan](https://github.com/dmeltonyan) · [meltonyan.dev](https://meltonyan.dev)
